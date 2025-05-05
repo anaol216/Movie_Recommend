@@ -5,5 +5,5 @@ motor
 scikit-learn
 numpy
 pandas
-
+streamline
 python-dotenv
