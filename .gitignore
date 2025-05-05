@@ -1,0 +1,38 @@
+# === Python ===
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pkl
+*.h5
+*.db
+
+# Virtual environments
+.venv/
+venv/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# === Node.js / Next.js frontend ===
+node_modules/
+frontend/.next/
+frontend/out/
+frontend/package-lock.json
+
+# Build or dist folders (general)
+dist/
+build/
+package-lock.json
+# === Environment files ===
+.env
+.env.*
+
+# === System / Editor ===
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.gitigonore
+# === Archive or backup folders ===
+archive (2)/
