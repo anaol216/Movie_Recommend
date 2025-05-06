@@ -1,4 +1,5 @@
 // pages/index.tsx
+"use client";
 
 import React, { useState } from 'react';
 
@@ -29,7 +30,8 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center px-4">
+    <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center px-4" style={{ backgroundImage: "url('/background.jpg'), backgroundSize: 'cover', backgroundPosition: 'center'" }}>
+      <div className="absolute inset-0 bg-black opacity-50"></div>
       <h1 className="text-3xl font-bold mb-6">🎬 Movie Recommender</h1>
 
       <input
@@ -37,7 +39,7 @@ export default function Home() {
         placeholder="Enter Video ID"
         value={selectedId}
         onChange={(e) => setSelectedId(e.target.value)}
-        className="p-2 rounded text-black w-64 mb-4"
+        className="p-2 rounded text-black w-64 mb-4 bg-gray-200"
       />
 
       <button
