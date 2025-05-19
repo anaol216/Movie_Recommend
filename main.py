@@ -4,7 +4,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 import pickle
 
 # Load dataset
-movies = pd.read_csv("archive (2)/KuaiRand-Pure/KuaiRand-Pure/data/video_features_basic_pure.csv")
+movies = pd.read_csv("archive/KuaiRand-Pure/KuaiRand-Pure/data/video_features_basic_pure.csv")
 
 # Copy to new_data
 new_data = movies.copy()
