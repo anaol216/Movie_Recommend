@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import pickle
 import pandas as pd
+import numpy as np # Import numpy
 
 app = FastAPI()
 
@@ -32,3 +33,4 @@ def recommend(video_id: int):
         })
     
     return recommended
+

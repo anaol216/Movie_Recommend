@@ -2,6 +2,7 @@ import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import pickle
+import numpy as np  # Import numpy
 
 # Load dataset
 movies = pd.read_csv("data/KuaiRand-Pure/KuaiRand-Pure/data/video_features_basic_pure.csv")
@@ -12,7 +13,7 @@ new_data = movies.copy()
 # Fill only object (string) columns with ""
 for col in ["video_type", "music_type", "tag"]:
     if new_data[col].dtype == "float64":
-        new_data[col] = new_data[col].fillna("").astype(str)
+        new_data[col] = new_data[col].fillna("").astype(np.float32)  # Use float32
     else:
         new_data[col] = new_data[col].fillna("").astype(str)
 
@@ -29,7 +30,9 @@ vector = cv.fit_transform(new_data["tags"].values.astype("U")).toarray()
 
 # Similarity matrix
 similarity = cosine_similarity(vector)
+similarity = similarity.astype(np.float32) #use float32
 
 # Save pickles
 pickle.dump(new_data, open("movies_list.pkl", "wb"))
 pickle.dump(similarity, open("similarity.pkl", "wb"))
+
