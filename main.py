@@ -13,7 +13,7 @@ new_data = movies.copy()
 # Fill only object (string) columns with ""
 for col in ["video_type", "music_type", "tag"]:
     if new_data[col].dtype == "float64":
-        new_data[col] = new_data[col].fillna("").astype(np.float32)  # Use float32
+        new_data[col] = new_data[col].fillna(0).astype(np.float32)  # Use float32 and fill with 0
     else:
         new_data[col] = new_data[col].fillna("").astype(str)
 
