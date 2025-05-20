@@ -25,15 +25,15 @@ movies = df[["video_id"] + features_cols].drop_duplicates()
 for col in ["video_type", "music_type", "tag"]:
     if col in movies.columns: #check if the column exists
         if movies[col].dtype == "float64":
-            movies[col] = movies[col].fillna(0).astype(np.float32)
+            movies[col] = movies[col].fillna(0).astype(np.float32).astype(str) # Convert to string
         else:
             movies[col] = movies[col].fillna("").astype(str)
 
 # Combine selected features into a single text field
 movies["tags"] = (
-    movies["video_type"] + " " +
-    movies["music_type"] + " " +
-    movies["tag"]
+    movies["video_type"].astype(str) + " " +  # Ensure string conversion
+    movies["music_type"].astype(str) + " " +  # Ensure string conversion
+    movies["tag"].astype(str)                # Ensure string conversion
 )
 
 # Vectorize
