@@ -3,6 +3,7 @@ import numpy as np
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import pickle
+from scipy.sparse import save_npz, csr_matrix  # Import sparse matrix functionality
 
 # Load dataset
 df = pd.read_csv("data/KuaiRand-Pure/KuaiRand-Pure/data/video_features_basic_pure.csv")
@@ -23,27 +24,28 @@ movies = df[["video_id"] + features_cols].drop_duplicates()
 
 # Fill only object (string) columns with ""
 for col in ["video_type", "music_type", "tag"]:
-    if col in movies.columns: #check if the column exists
+    if col in movies.columns:  # check if the column exists
         if movies[col].dtype == "float64":
-            movies[col] = movies[col].fillna(0).astype(np.float32).astype(str) # Convert to string
+            movies[col] = movies[col].fillna(0).astype(np.float32).astype(str)  # Convert to string
         else:
             movies[col] = movies[col].fillna("").astype(str)
 
 # Combine selected features into a single text field
 movies["tags"] = (
-    movies["video_type"].astype(str) + " " +  # Ensure string conversion
-    movies["music_type"].astype(str) + " " +  # Ensure string conversion
-    movies["tag"].astype(str)                # Ensure string conversion
+    movies["video_type"].astype(str) + " " +
+    movies["music_type"].astype(str) + " " +
+    movies["tag"].astype(str)
 )
 
 # Vectorize
 cv = CountVectorizer(max_features=10000, stop_words='english')
-vector = cv.fit_transform(movies["tags"].values.astype("U")).toarray()
+vector = cv.fit_transform(movies["tags"].values.astype("U"))  # vector is now a sparse matrix
 
-# Similarity matrix
-similarity = cosine_similarity(vector).astype(np.float32)
+# Similarity matrix (calculate on sparse matrix)
+similarity = cosine_similarity(vector) #similarity will be sparse if vector is sparse
+similarity = similarity.astype(np.float32)
 
-# Save pickles
+# Save files
 pickle.dump(movies, open("movies_list.pkl", "wb"))
-pickle.dump(similarity, open("similarity.pkl", "wb"))
+save_npz("similarity.npz", csr_matrix(similarity))  # Save similarity as sparse .npz
 
