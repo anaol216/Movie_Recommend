@@ -4,7 +4,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from scipy.sparse import save_npz
 
 # Load dataset
-df = pd.read_csv("data/KuaiRand-Pure/KuaiRand-Pure/data/video_features_statistic_pure.csv")
+df = pd.read_csv("archive/KuaiRand-Pure/KuaiRand-Pure/data/video_features_statistic_pure.csv")
 
 # Columns to use as features (adjust if you find more relevant ones)
 features_cols = ["video_type", "upload_dt", "upload_type"]
