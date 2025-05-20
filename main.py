@@ -1,54 +1,42 @@
-import pandas as pd
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 import pickle
-import numpy as np
-import os
+import pandas as pd
 
-# Load dataset
-csv_path = "data/KuaiRand-Pure/KuaiRand-Pure/data/video_features_basic_pure.csv"
-if not os.path.exists(csv_path):
-    raise FileNotFoundError(f"Dataset not found at: {csv_path}")
+app = FastAPI()
 
-movies = pd.read_csv(csv_path)
-
-# Copy to new_data
-new_data = movies.copy()
-
-# Ensure required columns
-required_columns = ["video_id", "video_type", "music_type", "tag"]
-missing = [col for col in required_columns if col not in new_data.columns]
-if missing:
-    raise ValueError(f"Missing required columns: {missing}")
-
-# Fill with "" and force all as string
-for col in ["video_type", "music_type", "tag"]:
-    new_data[col] = new_data[col].fillna("").astype(str)
-
-# Just in case anything slipped through, ensure all are string type
-new_data["video_type"] = new_data["video_type"].apply(lambda x: str(x))
-new_data["music_type"] = new_data["music_type"].apply(lambda x: str(x))
-new_data["tag"] = new_data["tag"].apply(lambda x: str(x))
-
-# Combine tags safely
-new_data["tags"] = (
-    new_data["video_type"] + " " +
-    new_data["music_type"] + " " +
-    new_data["tag"]
+# CORS setup (IMPORTANT for frontend to connect)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Change this to your frontend URL in production
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-# Vectorize tags
-cv = CountVectorizer(max_features=10000, stop_words='english')
-vector = cv.fit_transform(new_data["tags"].values.astype("U"))
+# Load data
+movies = pickle.load(open("models/movies_list.pkl", "rb"))
+similarity = pickle.load(open("models/similarity.pkl", "rb"))
 
-# Compute cosine similarity
-similarity = cosine_similarity(vector, dense_output=False).astype(np.float32)
+@app.get("/")
+def root():
+    return {"message": "🎬 Video Recommendation API is running"}
 
-# Save
-with open("movies_list.pkl", "wb") as f:
-    pickle.dump(new_data[["video_id", "video_type", "music_type", "tag"]], f)
+@app.get("/recommend")
+def recommend(video_id: int):
+    if video_id not in movies["video_id"].values:
+        raise HTTPException(status_code=404, detail="Video ID not found")
+    
+    index = movies[movies["video_id"] == video_id].index[0]
+    distances = sorted(list(enumerate(similarity[index])), reverse=True, key=lambda x: x[1])
 
-with open("similarity.pkl", "wb") as f:
-    pickle.dump(similarity, f)
-
-print("✅ Model built and saved successfully!")
+    recommended = []
+    for i in distances[1:6]:  # Top 5 excluding self
+        row = movies.iloc[i[0]]
+        recommended.append({
+            "video_id": int(row["video_id"]),
+            "video_type": str(row.get("video_type", "")),
+            "music_type": str(row.get("music_type", "")),
+            "tag": str(row.get("tag", ""))
+        })
+    
+    return recommended
