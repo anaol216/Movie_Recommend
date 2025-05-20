@@ -1,41 +1,35 @@
 import pandas as pd
 import pickle
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
 from scipy.sparse import save_npz
 
-# Load raw dataset (update path if needed)
+# Load dataset
 df = pd.read_csv("data/KuaiRand-Pure/KuaiRand-Pure/data/video_features_statistic_pure.csv")
 
-# Select necessary columns (update based on your real columns)
-movies = df[["video_id", "video_type", "music_type", "tag"]].drop_duplicates()
+# Columns to use as features (adjust if you find more relevant ones)
+features_cols = ["video_type", "upload_dt", "upload_type"]
 
-# Create combined feature string column for similarity
-movies["features"] = movies["video_type"].fillna('') + " " + movies["music_type"].fillna('') + " " + movies["tag"].fillna('')
+# Drop duplicates based on video_id + feature columns
+movies = df[["video_id"] + features_cols].drop_duplicates()
 
-# Vectorize features using TF-IDF (creates sparse matrix)
+# Combine feature columns into one string, fill missing values with empty string
+movies["features"] = movies[features_cols].fillna('').agg(' '.join, axis=1)
+
+# Vectorize combined text features using TF-IDF (sparse matrix)
 tfidf = TfidfVectorizer(stop_words="english")
 feature_matrix = tfidf.fit_transform(movies["features"])
 
-# Compute cosine similarity matrix (dense is large; we save sparse dot product)
-# similarity = cosine_similarity(feature_matrix)  # Dense matrix
+# Compute sparse cosine similarity matrix by multiplying sparse TF-IDF matrix with its transpose
+similarity_sparse = feature_matrix * feature_matrix.T
 
-# Instead of dense, save the sparse matrix directly as feature_matrix (we can use dot product later)
-# But since your API expects similarity, let's precompute similarity matrix sparse:
-
-from sklearn.metrics.pairwise import linear_kernel
-similarity = linear_kernel(feature_matrix, feature_matrix)  # returns dense matrix
-
-# To optimize memory: convert to sparse matrix and save
-from scipy.sparse import csr_matrix
-similarity_sparse = csr_matrix(similarity)
-
-# Save movies DataFrame as pickle (drop features to save space)
+# Remove the temporary 'features' column before saving
 movies.drop(columns=["features"], inplace=True)
+
+# Save movies DataFrame (pickle)
 with open("movies_list.pkl", "wb") as f:
     pickle.dump(movies, f)
 
-# Save similarity sparse matrix as .npz (more efficient)
+# Save sparse similarity matrix (.npz)
 save_npz("similarity.npz", similarity_sparse)
 
-print("Pickle and similarity matrix saved!")
+print("Memory-optimized movies list and similarity matrix saved!")
