@@ -18,7 +18,7 @@ export default function Home() {
     if (!selectedId) return;
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:8000/recommend?video_id=${selectedId}`);
+      const res = await fetch(`http://localhost:8000/recommend/${selectedId}`);
 
       const data = await res.json();
       setRecommendations(data);
