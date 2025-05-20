@@ -1,42 +1,41 @@
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-import pickle
 import pandas as pd
+import pickle
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+from scipy.sparse import save_npz
 
-app = FastAPI()
+# Load raw dataset (update path if needed)
+df = pd.read_csv("data/KuaiRand-Pure/KuaiRand-Pure/data/video_features_statistic_pure.csv")
 
-# CORS setup (IMPORTANT for frontend to connect)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Change this to your frontend URL in production
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Select necessary columns (update based on your real columns)
+movies = df[["video_id", "video_type", "music_type", "tag"]].drop_duplicates()
 
-# Load data
-movies = pickle.load(open("movies_list.pkl", "rb"))
-similarity = pickle.load(open("similarity.pkl", "rb"))
+# Create combined feature string column for similarity
+movies["features"] = movies["video_type"].fillna('') + " " + movies["music_type"].fillna('') + " " + movies["tag"].fillna('')
 
-@app.get("/")
-def root():
-    return {"message": "🎬 Video Recommendation API is running"}
+# Vectorize features using TF-IDF (creates sparse matrix)
+tfidf = TfidfVectorizer(stop_words="english")
+feature_matrix = tfidf.fit_transform(movies["features"])
 
-@app.get("/recommend")
-def recommend(video_id: int):
-    if video_id not in movies["video_id"].values:
-        raise HTTPException(status_code=404, detail="Video ID not found")
-    
-    index = movies[movies["video_id"] == video_id].index[0]
-    distances = sorted(list(enumerate(similarity[index])), reverse=True, key=lambda x: x[1])
+# Compute cosine similarity matrix (dense is large; we save sparse dot product)
+# similarity = cosine_similarity(feature_matrix)  # Dense matrix
 
-    recommended = []
-    for i in distances[1:6]:  # Top 5 excluding self
-        row = movies.iloc[i[0]]
-        recommended.append({
-            "video_id": int(row["video_id"]),
-            "video_type": str(row.get("video_type", "")),
-            "music_type": str(row.get("music_type", "")),
-            "tag": str(row.get("tag", ""))
-        })
-    
-    return recommended
+# Instead of dense, save the sparse matrix directly as feature_matrix (we can use dot product later)
+# But since your API expects similarity, let's precompute similarity matrix sparse:
+
+from sklearn.metrics.pairwise import linear_kernel
+similarity = linear_kernel(feature_matrix, feature_matrix)  # returns dense matrix
+
+# To optimize memory: convert to sparse matrix and save
+from scipy.sparse import csr_matrix
+similarity_sparse = csr_matrix(similarity)
+
+# Save movies DataFrame as pickle (drop features to save space)
+movies.drop(columns=["features"], inplace=True)
+with open("movies_list.pkl", "wb") as f:
+    pickle.dump(movies, f)
+
+# Save similarity sparse matrix as .npz (more efficient)
+save_npz("similarity.npz", similarity_sparse)
+
+print("Pickle and similarity matrix saved!")
