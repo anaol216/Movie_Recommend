@@ -13,17 +13,24 @@ export default function Home() {
   const [selectedId, setSelectedId] = useState('');
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   const handleFetch = async () => {
     if (!selectedId) return;
     setLoading(true);
+    setErrorMsg('');
     try {
       const res = await fetch(`https://movie-recommend-2-qgf4.onrender.com/recommend/${selectedId}`);
+      if (!res.ok) {
+        throw new Error(`Status ${res.status}`);
+      }
 
       const data = await res.json();
-      setRecommendations(data);
+      setRecommendations(data.recommendations); // ✅ CORRECTED HERE
     } catch (error) {
       console.error('Failed to fetch recommendations:', error);
+      setRecommendations([]);
+      setErrorMsg("❌ No recommendations found or server error.");
     } finally {
       setLoading(false);
     }
@@ -60,7 +67,8 @@ export default function Home() {
           🔍 Show Recommendations
         </button>
 
-        {loading && <p className="mt-4">Loading...</p>}
+        {loading && <p className="mt-4">⏳ Loading...</p>}
+        {errorMsg && <p className="text-red-400 mt-4">{errorMsg}</p>}
 
         <div className="mt-8 w-full max-w-xl">
           {recommendations.map((rec, i) => (
