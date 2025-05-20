@@ -6,6 +6,7 @@ import numpy as np
 from scipy.sparse import load_npz, issparse
 from functools import lru_cache
 import os
+from typing import List, Dict, Any
 
 app = FastAPI()
 
@@ -16,54 +17,64 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load the movies DataFrame
-try:
-    with open("movies_list.pkl", "rb") as f:
-        movies = pickle.load(f)
-    print("Loaded movies_list.pkl:")  # Debugging
-    print(movies.head())
-except FileNotFoundError:
-    raise RuntimeError("movies_list.pkl not found. Please run main.py first.")
+def load_data(movies_pkl="movies_list.pkl", similarity_npz="similarity.npz"):
+    """Loads movies data and similarity matrix."""
+    try:
+        with open(movies_pkl, "rb") as f:
+            movies = pickle.load(f)
+    except FileNotFoundError:
+        raise RuntimeError(f"Error: {movies_pkl} not found. Please run main.py first.")
+    except Exception as e:
+        raise RuntimeError(f"Error loading movies data: {e}")
 
-# Load the sparse similarity matrix using memory mapping
-try:
-    similarity_npz_path = "similarity.npz"
-    similarity_mmap = np.load(similarity_npz_path, mmap_mode='r')  # Memory-mapped file
-    print("Loaded similarity.npz with shape:", similarity_mmap['arr_0'].shape) # Debug
-except FileNotFoundError:
-    raise RuntimeError("similarity.npz not found. Please run main.py first.")
+    try:
+        similarity_mmap = np.load(similarity_npz, mmap_mode='r', allow_pickle=False)  # Memory-mapped file
+    except FileNotFoundError:
+        raise RuntimeError(f"Error: {similarity_npz} not found. Please run main.py first.")
+    except Exception as e:
+         raise RuntimeError(f"Error loading similarity matrix: {e}")
+    
+    return movies, similarity_mmap
+
+movies, similarity_mmap = load_data()
 
 
 @app.get("/")
 def home():
     return {"message": "🎬 Movie Recommendation API is running!"}
 
-@app.get("/columns")  # New endpoint to get column names
+@app.get("/columns", response_model=List[str])
 def get_columns():
     """
     Returns the column names from the movies DataFrame.
     """
-    return {"columns": movies.columns.tolist()}
+    return movies.columns.tolist()
 
-@app.get("/all_videos")
+@app.get("/all_videos", response_model=List[int])
 def get_all_video_ids():
     """
     Returns all video IDs from the movies DataFrame
     """
-    return {"video_ids": movies["video_id"].tolist()}
+    return movies["video_id"].tolist()
 
 
 @lru_cache(maxsize=128)
-@app.get("/recommend")
+@app.get("/recommend", response_model=List[Dict[str, Any]])
 def recommend(video_id: int):
-    print(f"Finding recommendations for video_id: {video_id}")  # Debugging
-    print(f"Video IDs in movies: {movies['video_id'].unique()}")
+    """
+    Provides movie recommendations based on video_id.
+
+    Args:
+        video_id (int): The ID of the video to get recommendations for.
+
+    Returns:
+        List[Dict[str, Any]]: A list of recommended movies (dictionaries).
+    """
     if video_id not in movies["video_id"].values:
-        raise HTTPException(status_code=404, detail="Video ID not found")
+        raise HTTPException(status_code=404, detail=f"Video ID {video_id} not found")
 
     index = movies[movies["video_id"] == video_id].index[0]
-    print(f"Found index: {index} for video_id: {video_id}") # Debug
-    similarity_row = similarity_mmap['arr_0'][index]
+    similarity_row = similarity_mmap['data'][index]  # Access with 'data' key
     distances = list(enumerate(similarity_row))
     distances = sorted(distances, reverse=True, key=lambda x: x[1])
     recommended = []
@@ -75,6 +86,5 @@ def recommend(video_id: int):
             "music_type": row.get("music_type", ""),
             "tag": row.get("tag", "")
         })
-    print("Recommendations:", recommended)
     return recommended
 
