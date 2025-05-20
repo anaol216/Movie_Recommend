@@ -28,7 +28,7 @@ def load_data(movies_pkl="movies_list.pkl", similarity_npz="similarity.npz"):
         raise RuntimeError(f"Error loading movies data: {e}")
 
     try:
-        similarity_mmap = np.load(similarity_npz, mmap_mode='r', allow_pickle=False)  # Memory-mapped file
+        similarity_mmap = load_npz(similarity_npz, allow_pickle=False)  # Load the whole sparse matrix
     except FileNotFoundError:
         raise RuntimeError(f"Error: {similarity_npz} not found. Please run main.py first.")
     except Exception as e:
@@ -74,8 +74,8 @@ def recommend(video_id: int):
         raise HTTPException(status_code=404, detail=f"Video ID {video_id} not found")
 
     index = movies[movies["video_id"] == video_id].index[0]
-    similarity_row = similarity_mmap['data'][index]  # Access with 'data' key
-    distances = list(enumerate(similarity_row))
+    similarity_row = similarity_mmap[index]  # Access the row
+    distances = list(enumerate(similarity_row.toarray()[0])) # convert to dense for sorting
     distances = sorted(distances, reverse=True, key=lambda x: x[1])
     recommended = []
     for i in distances[1:6]:
