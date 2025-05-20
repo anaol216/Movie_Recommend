@@ -1,21 +1,21 @@
+# app.py
+import pickle
+import numpy as np
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-import pickle
-import pandas as pd
-import numpy as np
-from scipy.sparse import load_npz, issparse
-from functools import lru_cache
-import os
-from typing import List, Dict, Any
+from scipy.sparse import load_npz
 
 app = FastAPI()
 
+# Allow CORS for your frontend or development
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # Set your frontend domain here in production
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 def load_data(movies_pkl="movies_list.pkl", similarity_npz="similarity.npz"):
     """Loads movies data and similarity matrix."""
@@ -28,7 +28,7 @@ def load_data(movies_pkl="movies_list.pkl", similarity_npz="similarity.npz"):
         raise RuntimeError(f"Error loading movies data: {e}")
 
     try:
-        similarity_mmap = load_npz(similarity_npz, allow_pickle=False)  # Load sparse matrix
+        similarity_mmap = load_npz(similarity_npz)  # FIXED: Removed allow_pickle=False
     except FileNotFoundError:
         raise RuntimeError(f"Error: {similarity_npz} not found. Please run main.py first.")
     except Exception as e:
@@ -36,56 +36,45 @@ def load_data(movies_pkl="movies_list.pkl", similarity_npz="similarity.npz"):
     
     return movies, similarity_mmap
 
-movies, similarity_mmap = load_data()
 
+def recommend(movie_title: str, movies, similarity_mmap):
+    if movie_title not in movies["title"].values:
+        raise ValueError(f"Movie '{movie_title}' not found in dataset.")
+    
+    idx = movies[movies["title"] == movie_title].index[0]
+    sim_scores = list(enumerate(similarity_mmap[idx].toarray()[0]))
+    sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)[1:6]  # Top 5 excluding itself
 
-@app.get("/")
-def home():
-    return {"message": "🎬 Movie Recommendation API is running!"}
-
-@app.get("/columns", response_model=List[str])
-def get_columns():
-    """
-    Returns the column names from the movies DataFrame.
-    """
-    return movies.columns.tolist()
-
-@app.get("/all_videos", response_model=List[int])
-def get_all_video_ids():
-    """
-    Returns all video IDs from the movies DataFrame
-    """
-    return movies["video_id"].tolist()
-
-
-@lru_cache(maxsize=128)
-@app.get("/recommend", response_model=List[Dict[str, Any]])
-def recommend(video_id: int):
-    """
-    Provides movie recommendations based on video_id.
-
-    Args:
-        video_id (int): The ID of the video to get recommendations for.
-
-    Returns:
-        List[Dict[str, Any]]: A list of recommended movies (dictionaries).
-    """
-    if video_id not in movies["video_id"].values:
-        raise HTTPException(status_code=404, detail=f"Video ID {video_id} not found")
-
-    index = movies[movies["video_id"] == video_id].index[0]
-    similarity_row = similarity_mmap[index]  # Access the row
-    distances = list(enumerate(similarity_row.toarray()[0])) # convert to dense for sorting
-    distances = sorted(distances, reverse=True, key=lambda x: x[1])
     recommended = []
-    for i in distances[1:6]:
-        row = movies.iloc[i[0]]
+    for i in sim_scores:
+        movie = movies.iloc[i[0]]
         recommended.append({
-            "video_id": int(row["video_id"]),
-            "video_type": row.get("video_type", ""),
-            "music_type": row.get("music_type", ""),
-            "tag": row.get("tag", "")
+            "title": movie["title"],
+            "id": movie["movie_id"]
         })
+    
     return recommended
 
 
+# Load data on startup
+try:
+    movies, similarity_mmap = load_data()
+except Exception as e:
+    print(e)
+    raise
+
+
+@app.get("/")
+def read_root():
+    return {"message": "Movie Recommendation API is running 🚀"}
+
+
+@app.get("/recommend/{movie_title}")
+def get_recommendations(movie_title: str):
+    try:
+        recommendations = recommend(movie_title, movies, similarity_mmap)
+        return {"recommendations": recommendations}
+    except ValueError as ve:
+        raise HTTPException(status_code=404, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
