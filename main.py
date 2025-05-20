@@ -5,7 +5,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 def generate_recommendations_json(
-    csv_file="data/KuaiRand-Pure/KuaiRand-Pure/data/video_features_basic_pure",
+    csv_file="data/KuaiRand-Pure/KuaiRand-Pure/data/video_features_basic_pure.csv",
     output_json="recommendations.json",
     top_n=5
 ):
