@@ -3,7 +3,7 @@ import numpy as np
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import pickle
-from scipy.sparse import save_npz, csr_matrix  # Import sparse matrix functionality
+from scipy.sparse import save_npz, csr_matrix
 
 # Load dataset
 df = pd.read_csv("data/KuaiRand-Pure/KuaiRand-Pure/data/video_features_basic_pure.csv")
@@ -19,6 +19,12 @@ for col in ['video_id'] + features_cols:
     if col not in df.columns:
         print(f"Error: Column '{col}' not found in DataFrame.")
         exit(1)  # Stop execution if a required column is missing.
+        
+# Downcast video_id to the smallest possible integer type
+if df['video_id'].max() <= np.iinfo(np.int32).max:
+    df['video_id'] = df['video_id'].astype(np.int32)
+elif df['video_id'].max() <= np.iinfo(np.int64).max:
+    df['video_id'] = df['video_id'].astype(np.int64)
 
 movies = df[["video_id"] + features_cols].drop_duplicates()
 
@@ -38,11 +44,11 @@ movies["tags"] = (
 )
 
 # Vectorize
-cv = CountVectorizer(max_features=10000, stop_words='english')
+cv = CountVectorizer(max_features=2000, stop_words='english')  # Reduced max_features
 vector = cv.fit_transform(movies["tags"].values.astype("U"))  # vector is now a sparse matrix
 
 # Similarity matrix (calculate on sparse matrix)
-similarity = cosine_similarity(vector) #similarity will be sparse if vector is sparse
+similarity = cosine_similarity(vector)  # similarity will be sparse if vector is sparse
 similarity = similarity.astype(np.float32)
 
 # Save files
