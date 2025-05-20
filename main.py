@@ -14,8 +14,8 @@ app.add_middleware(
 )
 
 # Load data
-movies = pickle.load(open("models/movies_list.pkl", "rb"))
-similarity = pickle.load(open("models/similarity.pkl", "rb"))
+movies = pickle.load(open("movies_list.pkl", "rb"))
+similarity = pickle.load(open("similarity.pkl", "rb"))
 
 @app.get("/")
 def root():
