@@ -1,3 +1,4 @@
+
 import pandas as pd
 import numpy as np
 from sklearn.feature_extraction.text import CountVectorizer
@@ -63,7 +64,7 @@ def create_recommendation_data(csv_file="data/KuaiRand-Pure/KuaiRand-Pure/data/v
     vector = cv.fit_transform(movies["tags"].values.astype("U"))  # vector is now a sparse matrix
 
     # Similarity matrix (calculate on sparse matrix)
-    similarity = cosine_similarity(vector)  # similarity will be sparse if vector is sparse
+    similarity = cosine_similarity(vector)  # similarity will be dense matrix
     similarity = similarity.astype(np.float32)
 
     # Save files
@@ -74,7 +75,7 @@ def create_recommendation_data(csv_file="data/KuaiRand-Pure/KuaiRand-Pure/data/v
         raise RuntimeError(f"Error saving movies data: {e}")
 
     try:
-        save_npz(output_similarity_npz, {'data': csr_matrix(similarity)})  # Save similarity as sparse .npz with explicit name
+        save_npz(output_similarity_npz, csr_matrix(similarity))  # <-- FIXED HERE
     except Exception as e:
         raise RuntimeError(f"Error saving similarity matrix: {e}")
     
@@ -82,7 +83,5 @@ def create_recommendation_data(csv_file="data/KuaiRand-Pure/KuaiRand-Pure/data/v
     print(f"Saved similarity matrix to {output_similarity_npz}")
 
 
-
 if __name__ == "__main__":
     create_recommendation_data()
-

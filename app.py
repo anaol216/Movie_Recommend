@@ -28,11 +28,11 @@ def load_data(movies_pkl="movies_list.pkl", similarity_npz="similarity.npz"):
         raise RuntimeError(f"Error loading movies data: {e}")
 
     try:
-        similarity_mmap = load_npz(similarity_npz, allow_pickle=False)  # Load the whole sparse matrix
+        similarity_mmap = load_npz(similarity_npz, allow_pickle=False)  # Load sparse matrix
     except FileNotFoundError:
         raise RuntimeError(f"Error: {similarity_npz} not found. Please run main.py first.")
     except Exception as e:
-         raise RuntimeError(f"Error loading similarity matrix: {e}")
+        raise RuntimeError(f"Error loading similarity matrix: {e}")
     
     return movies, similarity_mmap
 
@@ -87,4 +87,5 @@ def recommend(video_id: int):
             "tag": row.get("tag", "")
         })
     return recommended
+
 
