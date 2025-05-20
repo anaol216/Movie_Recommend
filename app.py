@@ -20,6 +20,8 @@ app.add_middleware(
 try:
     with open("movies_list.pkl", "rb") as f:
         movies = pickle.load(f)
+    print("Loaded movies_list.pkl:")  # Debugging
+    print(movies.head())
 except FileNotFoundError:
     raise RuntimeError("movies_list.pkl not found. Please run main.py first.")
 
@@ -27,6 +29,7 @@ except FileNotFoundError:
 try:
     similarity_npz_path = "similarity.npz"
     similarity_mmap = np.load(similarity_npz_path, mmap_mode='r')  # Memory-mapped file
+    print("Loaded similarity.npz with shape:", similarity_mmap['arr_0'].shape) # Debug
 except FileNotFoundError:
     raise RuntimeError("similarity.npz not found. Please run main.py first.")
 
@@ -35,16 +38,32 @@ except FileNotFoundError:
 def home():
     return {"message": "🎬 Movie Recommendation API is running!"}
 
+@app.get("/columns")  # New endpoint to get column names
+def get_columns():
+    """
+    Returns the column names from the movies DataFrame.
+    """
+    return {"columns": movies.columns.tolist()}
 
-@lru_cache(maxsize=128)  # Cache the results of up to 128 calls
+@app.get("/all_videos")
+def get_all_video_ids():
+    """
+    Returns all video IDs from the movies DataFrame
+    """
+    return {"video_ids": movies["video_id"].tolist()}
+
+
+@lru_cache(maxsize=128)
 @app.get("/recommend")
 def recommend(video_id: int):
+    print(f"Finding recommendations for video_id: {video_id}")  # Debugging
+    print(f"Video IDs in movies: {movies['video_id'].unique()}")
     if video_id not in movies["video_id"].values:
         raise HTTPException(status_code=404, detail="Video ID not found")
 
     index = movies[movies["video_id"] == video_id].index[0]
-    # similarity is sparse, keep it sparse and use mmap
-    similarity_row = similarity_mmap['arr_0'][index]  # Access the row from the memory-mapped array.  arr_0 is the default name.
+    print(f"Found index: {index} for video_id: {video_id}") # Debug
+    similarity_row = similarity_mmap['arr_0'][index]
     distances = list(enumerate(similarity_row))
     distances = sorted(distances, reverse=True, key=lambda x: x[1])
     recommended = []
@@ -56,5 +75,6 @@ def recommend(video_id: int):
             "music_type": row.get("music_type", ""),
             "tag": row.get("tag", "")
         })
+    print("Recommendations:", recommended)
     return recommended
 
