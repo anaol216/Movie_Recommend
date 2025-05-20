@@ -18,7 +18,7 @@ export default function Home() {
     if (!selectedId) return;
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:8000/recommend/${selectedId}`);
+      const res = await fetch(`https://movie-recommend-2-qgf4.onrender.com/recommend/${selectedId}`);
 
       const data = await res.json();
       setRecommendations(data);
