@@ -82,6 +82,7 @@ def create_recommendation_data(csv_file="data/KuaiRand-Pure/KuaiRand-Pure/data/v
     print(f"Saved similarity matrix to {output_similarity_npz}")
 
 
+
 if __name__ == "__main__":
     create_recommendation_data()
 
