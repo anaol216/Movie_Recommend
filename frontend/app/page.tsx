@@ -2,16 +2,9 @@
 
 import React, { useState } from 'react';
 
-type Recommendation = {
-  video_id: number;
-  video_type: string;
-  music_type: string;
-  tag: string;
-};
-
 export default function Home() {
   const [selectedId, setSelectedId] = useState('');
-  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [recommendations, setRecommendations] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -26,7 +19,7 @@ export default function Home() {
       }
 
       const data = await res.json();
-      setRecommendations(data.recommendations); // ✅ CORRECTED HERE
+      setRecommendations(data.recommendations); // ✅ handles array of strings like ["137", "145", ...]
     } catch (error) {
       console.error('Failed to fetch recommendations:', error);
       setRecommendations([]);
@@ -71,13 +64,10 @@ export default function Home() {
         {errorMsg && <p className="text-red-400 mt-4">{errorMsg}</p>}
 
         <div className="mt-8 w-full max-w-xl">
-          {recommendations.map((rec, i) => (
+          {recommendations.map((recId, i) => (
             <div key={i} className="bg-gray-800 rounded p-4 mb-4 shadow">
               <h2 className="text-xl font-semibold mb-2">🎬 Recommendation {i + 1}</h2>
-              <p><strong>Video ID:</strong> {rec.video_id}</p>
-              <p><strong>Video Type:</strong> {rec.video_type}</p>
-              <p><strong>Music Type:</strong> {rec.music_type}</p>
-              <p><strong>Tag:</strong> {rec.tag}</p>
+              <p><strong>Recommended Video ID:</strong> {recId}</p>
             </div>
           ))}
         </div>
