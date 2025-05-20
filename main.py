@@ -1,35 +1,49 @@
 import pandas as pd
+import numpy as np
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 import pickle
-from sklearn.feature_extraction.text import TfidfVectorizer
-from scipy.sparse import save_npz
 
 # Load dataset
-df = pd.read_csv("archive/KuaiRand-Pure/KuaiRand-Pure/data/video_features_statistic_pure.csv")
+df = pd.read_csv("data/KuaiRand-Pure/KuaiRand-Pure/data/video_features_basic_pure.csv")
 
-# Columns to use as features (adjust if you find more relevant ones)
-features_cols = ["video_type", "upload_dt", "upload_type"]
+# Print the columns to debug
+print("Columns in the CSV file:", df.columns)
 
-# Drop duplicates based on video_id + feature columns
+# Correct the column names based on the actual CSV file
+features_cols = ['video_type', 'music_type', 'tag']
+
+# Check if the columns exist before proceeding.
+for col in ['video_id'] + features_cols:
+    if col not in df.columns:
+        print(f"Error: Column '{col}' not found in DataFrame.")
+        exit(1)  # Stop execution if a required column is missing.
+
 movies = df[["video_id"] + features_cols].drop_duplicates()
 
-# Combine feature columns into one string, fill missing values with empty string
-movies["features"] = movies[features_cols].fillna('').agg(' '.join, axis=1)
+# Fill only object (string) columns with ""
+for col in ["video_type", "music_type", "tag"]:
+    if col in movies.columns: #check if the column exists
+        if movies[col].dtype == "float64":
+            movies[col] = movies[col].fillna(0).astype(np.float32)
+        else:
+            movies[col] = movies[col].fillna("").astype(str)
 
-# Vectorize combined text features using TF-IDF (sparse matrix)
-tfidf = TfidfVectorizer(stop_words="english")
-feature_matrix = tfidf.fit_transform(movies["features"])
+# Combine selected features into a single text field
+movies["tags"] = (
+    movies["video_type"] + " " +
+    movies["music_type"] + " " +
+    movies["tag"]
+)
 
-# Compute sparse cosine similarity matrix by multiplying sparse TF-IDF matrix with its transpose
-similarity_sparse = feature_matrix * feature_matrix.T
+# Vectorize
+cv = CountVectorizer(max_features=10000, stop_words='english')
+vector = cv.fit_transform(movies["tags"].values.astype("U")).toarray()
 
-# Remove the temporary 'features' column before saving
-movies.drop(columns=["features"], inplace=True)
+# Similarity matrix
+similarity = cosine_similarity(vector).astype(np.float32)
 
-# Save movies DataFrame (pickle)
-with open("movies_list.pkl", "wb") as f:
-    pickle.dump(movies, f)
+# Save pickles
+pickle.dump(movies, open("movies_list.pkl", "wb"))
+pickle.dump(similarity, open("similarity.pkl", "wb"))
 
-# Save sparse similarity matrix (.npz)
-save_npz("similarity.npz", similarity_sparse)
-
-print("Memory-optimized movies list and similarity matrix saved!")
